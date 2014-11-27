@@ -10,6 +10,7 @@ from cqlengine import Model, columns, BatchQuery
 from cqlengine.management import sync_table
 from cqlengine.tests.base import BaseCassEngTestCase
 
+from contextlib import nested
 
 class TestTimestampModel(Model):
     __keyspace__ = 'test'
@@ -28,7 +29,8 @@ class BaseTimestampTest(BaseCassEngTestCase):
 class BatchTest(BaseTimestampTest):
 
     def test_batch_is_included(self):
-        with mock.patch.object(self.session, "execute") as m, BatchQuery(timestamp=timedelta(seconds=30)) as b:
+        with nested(mock.patch.object(self.session, "execute"),
+                BatchQuery(timestamp=timedelta(seconds=30))) as (m, b):
             TestTimestampModel.batch(b).create(count=1)
 
         "USING TIMESTAMP".should.be.within(m.call_args[0][0].query_string)
@@ -37,7 +39,8 @@ class BatchTest(BaseTimestampTest):
 class CreateWithTimestampTest(BaseTimestampTest):
 
     def test_batch(self):
-        with mock.patch.object(self.session, "execute") as m, BatchQuery() as b:
+        with nested(mock.patch.object(self.session, "execute"),
+                BatchQuery()) as (m, b):
             TestTimestampModel.timestamp(timedelta(seconds=10)).batch(b).create(count=1)
 
         query = m.call_args[0][0].query_string
@@ -84,7 +87,8 @@ class UpdateWithTimestampTest(BaseTimestampTest):
         "USING TIMESTAMP".should.be.within(m.call_args[0][0].query_string)
 
     def test_instance_update_in_batch(self):
-        with mock.patch.object(self.session, "execute") as m, BatchQuery() as b:
+        with nested(mock.patch.object(self.session, "execute"),
+                BatchQuery()) as (m, b):
             self.instance.batch(b).timestamp(timedelta(seconds=30)).update(count=2)
 
         query = m.call_args[0][0].query_string

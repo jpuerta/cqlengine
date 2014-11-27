@@ -7,6 +7,7 @@ from cassandra.cqltypes import DateType
 
 from cqlengine.exceptions import ValidationError
 from cassandra.encoder import cql_quote
+from cqlengine.functions import get_total_seconds
 import six
 
 import sys
@@ -143,7 +144,7 @@ class Column(object):
             if self.has_default:
                 return self.get_default()
             elif self.required:
-                raise ValidationError('{} - None values are not allowed'.format(self.column_name or self.db_field))
+                raise ValidationError('{0} - None values are not allowed'.format(self.column_name or self.db_field))
         return value
 
     def to_python(self, value):
@@ -185,7 +186,7 @@ class Column(object):
         Returns a column definition for CQL table definition
         """
         static = "static" if self.static else ""
-        return '{} {} {}'.format(self.cql, self.db_type, static)
+        return '{0} {1} {2}'.format(self.cql, self.db_type, static)
 
     def set_column_name(self, name):
         """
@@ -202,14 +203,14 @@ class Column(object):
     @property
     def db_index_name(self):
         """ Returns the name of the cql index """
-        return 'index_{}'.format(self.db_field_name)
+        return 'index_{0}'.format(self.db_field_name)
 
     @property
     def cql(self):
         return self.get_cql()
 
     def get_cql(self):
-        return '"{}"'.format(self.db_field_name)
+        return '"{0}"'.format(self.db_field_name)
 
     def _val_is_null(self, val):
         """ determines if the given value equates to a null value for the given column type """
@@ -252,13 +253,13 @@ class Text(Column):
         value = super(Text, self).validate(value)
         if value is None: return
         if not isinstance(value, (six.string_types, bytearray)) and value is not None:
-            raise ValidationError('{} is not a string'.format(type(value)))
+            raise ValidationError('{0} is not a string'.format(type(value)))
         if self.max_length:
             if len(value) > self.max_length:
-                raise ValidationError('{} is longer than {} characters'.format(self.column_name, self.max_length))
+                raise ValidationError('{0} is longer than {1} characters'.format(self.column_name, self.max_length))
         if self.min_length:
             if len(value) < self.min_length:
-                raise ValidationError('{} is shorter than {} characters'.format(self.column_name, self.min_length))
+                raise ValidationError('{0} is shorter than {1} characters'.format(self.column_name, self.min_length))
         return value
 
 
@@ -271,7 +272,7 @@ class Integer(Column):
         try:
             return int(val)
         except (TypeError, ValueError):
-            raise ValidationError("{} can't be converted to integral value".format(value))
+            raise ValidationError("{0} can't be converted to integral value".format(value))
 
     def to_python(self, value):
         return self.validate(value)
@@ -295,7 +296,7 @@ class VarInt(Column):
             return int(val)
         except (TypeError, ValueError):
             raise ValidationError(
-                "{} can't be converted to integral value".format(value))
+                "{0} can't be converted to integral value".format(value))
 
     def to_python(self, value):
         return self.validate(value)
@@ -351,11 +352,11 @@ class DateTime(Column):
             if isinstance(value, date):
                 value = datetime(value.year, value.month, value.day)
             else:
-                raise ValidationError("'{}' is not a datetime object".format(value))
+                raise ValidationError("'{0}' is not a datetime object".format(value))
         epoch = datetime(1970, 1, 1, tzinfo=value.tzinfo)
-        offset = epoch.tzinfo.utcoffset(epoch).total_seconds() if epoch.tzinfo else 0
+        offset = get_total_seconds(epoch.tzinfo.utcoffset(epoch)) if epoch.tzinfo else 0
 
-        return int(((value - epoch).total_seconds() - offset) * 1000)
+        return int((get_total_seconds(value - epoch) - offset) * 1000)
 
 
 class Date(Column):
@@ -378,9 +379,9 @@ class Date(Column):
         if isinstance(value, datetime):
             value = value.date()
         if not isinstance(value, date):
-            raise ValidationError("'{}' is not a date object".format(repr(value)))
+            raise ValidationError("'{0}' is not a date object".format(repr(value)))
 
-        return int((value - date(1970, 1, 1)).total_seconds() * 1000)
+        return int(get_total_seconds(value - date(1970, 1, 1)) * 1000)
 
 
 class UUID(Column):
@@ -398,7 +399,7 @@ class UUID(Column):
         if isinstance(val, _UUID): return val
         if isinstance(val, six.string_types) and self.re_uuid.match(val):
             return _UUID(val)
-        raise ValidationError("{} is not a valid uuid".format(value))
+        raise ValidationError("{0} is not a valid uuid".format(value))
 
     def to_python(self, value):
         return self.validate(value)
@@ -428,8 +429,8 @@ class TimeUUID(UUID):
         global _last_timestamp
 
         epoch = datetime(1970, 1, 1, tzinfo=dt.tzinfo)
-        offset = epoch.tzinfo.utcoffset(epoch).total_seconds() if epoch.tzinfo else 0
-        timestamp = (dt  - epoch).total_seconds() - offset
+        offset = get_total_seconds(epoch.tzinfo.utcoffset(epoch)) if epoch.tzinfo else 0
+        timestamp = get_total_seconds(dt  - epoch) - offset
 
         node = None
         clock_seq = None
@@ -480,7 +481,7 @@ class Float(Column):
         try:
             return float(value)
         except (TypeError, ValueError):
-            raise ValidationError("{} is not a valid float".format(value))
+            raise ValidationError("{0} is not a valid float".format(value))
 
     def to_python(self, value):
         return self.validate(value)
@@ -500,7 +501,7 @@ class Decimal(Column):
         try:
             return _Decimal(val)
         except InvalidOperation:
-            raise ValidationError("'{}' can't be coerced to decimal".format(val))
+            raise ValidationError("'{0}' can't be coerced to decimal".format(val))
 
     def to_python(self, value):
         return self.validate(value)
@@ -551,7 +552,7 @@ class BaseContainerColumn(Column):
         """
         static = "static" if self.static else ""
         db_type = self.db_type.format(self.value_type.db_type)
-        return '{} {} {}'.format(self.cql, db_type, static)
+        return '{0} {1} {2}'.format(self.cql, db_type, static)
 
     def _val_is_null(self, val):
         return not val
@@ -569,7 +570,7 @@ class Set(BaseContainerColumn):
 
     http://www.datastax.com/docs/1.2/cql_cli/using/collections
     """
-    db_type = 'set<{}>'
+    db_type = 'set<{0}>'
 
     class Quoter(BaseContainerQuoter):
 
@@ -593,24 +594,24 @@ class Set(BaseContainerColumn):
         types = (set,) if self.strict else (set, list, tuple)
         if not isinstance(val, types):
             if self.strict:
-                raise ValidationError('{} is not a set object'.format(val))
+                raise ValidationError('{0} is not a set object'.format(val))
             else:
-                raise ValidationError('{} cannot be coerced to a set object'.format(val))
+                raise ValidationError('{0} cannot be coerced to a set object'.format(val))
 
         if None in val:
             raise ValidationError("None not allowed in a set")
 
-        return {self.value_col.validate(v) for v in val}
+        return set(self.value_col.validate(v) for v in val)
 
     def to_python(self, value):
         if value is None: return set()
-        return {self.value_col.to_python(v) for v in value}
+        return set(self.value_col.to_python(v) for v in value)
 
     def to_database(self, value):
         if value is None: return None
 
         if isinstance(value, self.Quoter): return value
-        return self.Quoter({self.value_col.to_database(v) for v in value})
+        return self.Quoter(self.value_col.to_database(v) for v in value)
 
 
 
@@ -621,7 +622,7 @@ class List(BaseContainerColumn):
 
     http://www.datastax.com/docs/1.2/cql_cli/using/collections_list
     """
-    db_type = 'list<{}>'
+    db_type = 'list<{0}>'
 
     class Quoter(BaseContainerQuoter):
 
@@ -639,7 +640,7 @@ class List(BaseContainerColumn):
         val = super(List, self).validate(value)
         if val is None: return
         if not isinstance(val, (set, list, tuple)):
-            raise ValidationError('{} is not a list object'.format(val))
+            raise ValidationError('{0} is not a list object'.format(val))
         if None in val:
             raise ValidationError("None is not allowed in a list")
         return [self.value_col.validate(v) for v in val]
@@ -651,7 +652,7 @@ class List(BaseContainerColumn):
     def to_database(self, value):
         if value is None: return None
         if isinstance(value, self.Quoter): return value
-        return self.Quoter([self.value_col.to_database(v) for v in value])
+        return self.Quoter(self.value_col.to_database(v) for v in value)
 
 
 class Map(BaseContainerColumn):
@@ -661,7 +662,7 @@ class Map(BaseContainerColumn):
     http://www.datastax.com/docs/1.2/cql_cli/using/collections_map
     """
 
-    db_type = 'map<{}, {}>'
+    db_type = 'map<{0}, {1}>'
 
     class Quoter(BaseContainerQuoter):
 
@@ -708,25 +709,28 @@ class Map(BaseContainerColumn):
             self.value_type.db_type
         )
         static = "static" if self.static else ""
-        return '{} {} {}'.format(self.cql, db_type, static)
+        return '{0} {1} {2}'.format(self.cql, db_type, static)
 
     def validate(self, value):
         val = super(Map, self).validate(value)
         if val is None: return
         if not isinstance(val, dict):
-            raise ValidationError('{} is not a dict object'.format(val))
-        return {self.key_col.validate(k):self.value_col.validate(v) for k,v in val.items()}
+            raise ValidationError('{0} is not a dict object'.format(val))
+        return dict((self.key_col.validate(k), self.value_col.validate(v)) for
+                (k,v) in val.items())
 
     def to_python(self, value):
         if value is None:
-            return {}
+            return dict()
         if value is not None:
-            return {self.key_col.to_python(k): self.value_col.to_python(v) for k,v in value.items()}
+            return dict((self.key_col.to_python(k), self.value_col.to_python(v))
+                    for (k,v) in value.items())
 
     def to_database(self, value):
         if value is None: return None
         if isinstance(value, self.Quoter): return value
-        return self.Quoter({self.key_col.to_database(k):self.value_col.to_database(v) for k,v in value.items()})
+        return self.Quoter((self.key_col.to_database(k),
+            self.value_col.to_database(v)) for (k,v) in value.items())
 
 
 
@@ -742,7 +746,7 @@ class _PartitionKeysToken(Column):
 
     @property
     def db_field_name(self):
-        return 'token({})'.format(', '.join(['"{}"'.format(c.db_field_name) for c in self.partition_columns]))
+        return 'token({0})'.format(', '.join(['"{0}"'.format(c.db_field_name) for c in self.partition_columns]))
 
     def to_database(self, value):
         from cqlengine.functions import Token
@@ -751,5 +755,5 @@ class _PartitionKeysToken(Column):
         return value
 
     def get_cql(self):
-        return "token({})".format(", ".join(c.cql for c in self.partition_columns))
+        return "token({0})".format(", ".join(c.cql for c in self.partition_columns))
 

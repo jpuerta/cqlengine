@@ -1,4 +1,8 @@
-from collections import OrderedDict
+try:
+    from collections import OrderedDict
+except:
+    from cassandra.util import OrderedDict
+
 import re
 import warnings
 
@@ -61,7 +65,7 @@ class QuerySetDescriptor(object):
             name, column = model._polymorphic_column_name, model._polymorphic_column
             if column.partition_key or column.index:
                 # look for existing poly types
-                return queryset.filter(**{name: model.__polymorphic_key__})
+                return queryset.filter(**dict({name: model.__polymorphic_key__}))
 
         return queryset
 
@@ -251,7 +255,7 @@ class ColumnDescriptor(object):
             if self.column.can_delete:
                 instance._values[self.column.column_name].delval()
             else:
-                raise AttributeError('cannot delete {} columns'.format(self.column.column_name))
+                raise AttributeError('cannot delete {0} columns'.format(self.column.column_name))
 
 
 class BaseModel(object):
@@ -270,7 +274,7 @@ class BaseModel(object):
 
     # custom timestamps, see USING TIMESTAMP X
     timestamp = TimestampDescriptor()
-    
+
     if_not_exists = IfNotExistsDescriptor()
 
     # _len is lazily created by __len__
@@ -326,7 +330,7 @@ class BaseModel(object):
     _if_not_exists = False # optional if_not_exists flag to check existence before insertion
 
     def __init__(self, **values):
-        self._values = {}
+        self._values = dict()
         self._ttl = self.__default_ttl__
         self._timestamp = None
         self._transaction = None
@@ -349,8 +353,8 @@ class BaseModel(object):
         """
         Pretty printing of models by their primary key
         """
-        return '{} <{}>'.format(self.__class__.__name__,
-                                ', '.join(('{}={}'.format(k, getattr(self, k)) for k,v in six.iteritems(self._primary_keys)))
+        return '{0} <{1}>'.format(self.__class__.__name__,
+                                ', '.join(('{0}={1}'.format(k, getattr(self, k)) for k,v in six.iteritems(self._primary_keys)))
                                 )
 
 
@@ -398,15 +402,16 @@ class BaseModel(object):
                 klass = poly_base._get_model_by_polymorphic_key(poly_key)
                 if klass is None:
                     raise PolyMorphicModelException(
-                        'unrecognized polymorphic key {} for class {}'.format(poly_key, poly_base.__name__)
+                        'unrecognized polymorphic key {0} for class {1}'.format(poly_key, poly_base.__name__)
                     )
 
             if not issubclass(klass, cls):
                 raise PolyMorphicModelException(
-                    '{} is not a subclass of {}'.format(klass.__name__, cls.__name__)
+                    '{0} is not a subclass of {1}'.format(klass.__name__, cls.__name__)
                 )
 
-            field_dict = {k: v for k, v in field_dict.items() if k in klass._columns.keys()}
+            field_dict = dict((k, v) for (k, v) in field_dict.items() if k in \
+                    klass._columns.keys())
 
         else:
             klass = cls
@@ -477,7 +482,7 @@ class BaseModel(object):
                 return cls._polymorphic_base.column_family_name(include_keyspace=include_keyspace)
 
             camelcase = re.compile(r'([a-z])([A-Z])')
-            ccase = lambda s: camelcase.sub(lambda v: '{}_{}'.format(v.group(1), v.group(2).lower()), s)
+            ccase = lambda s: camelcase.sub(lambda v: '{0}_{1}'.format(v.group(1), v.group(2).lower()), s)
 
             cf_name += ccase(cls.__name__)
             #trim to less than 48 characters or cassandra will complain
@@ -485,7 +490,7 @@ class BaseModel(object):
             cf_name = cf_name.lower()
             cf_name = re.sub(r'^_+', '', cf_name)
         if not include_keyspace: return cf_name
-        return '{}.{}'.format(cls._get_keyspace(), cf_name)
+        return '{0}.{1}'.format(cls._get_keyspace(), cf_name)
 
     def validate(self):
         """ Cleans and validates the field values """
@@ -538,7 +543,7 @@ class BaseModel(object):
 
     def _as_dict(self):
         """ Returns a map of column names to cleaned values """
-        values = self._dynamic_columns or {}
+        values = self._dynamic_columns or dict()
         for name, col in self._columns.items():
             values[name] = col.to_database(getattr(self, name, None))
         return values
@@ -547,7 +552,7 @@ class BaseModel(object):
     def create(cls, **kwargs):
         extra_columns = set(kwargs.keys()) - set(cls._columns.keys())
         if extra_columns:
-            raise ValidationError("Incorrect columns passed: {}".format(extra_columns))
+            raise ValidationError("Incorrect columns passed: {0}".format(extra_columns))
         return cls.objects.create(**kwargs)
 
     @classmethod
@@ -605,11 +610,11 @@ class BaseModel(object):
 
             # check for nonexistant columns
             if col is None:
-                raise ValidationError("{}.{} has no column named: {}".format(self.__module__, self.__class__.__name__, k))
+                raise ValidationError("{0}.{1} has no column named: {2}".format(self.__module__, self.__class__.__name__, k))
 
             # check for primary key update attempts
             if col.is_primary_key:
-                raise ValidationError("Cannot apply update to primary key '{}' for {}.{}".format(k, self.__module__, self.__class__.__name__))
+                raise ValidationError("Cannot apply update to primary key '{0}' for {1}.{2}".format(k, self.__module__, self.__class__.__name__))
 
             setattr(self, k, v)
 
@@ -679,7 +684,7 @@ class ModelMetaClass(type):
         #get inherited properties
         inherited_columns = OrderedDict()
         for base in bases:
-            for k,v in getattr(base, '_defined_columns', {}).items():
+            for k,v in getattr(base, '_defined_columns', dict()).items():
                 inherited_columns.setdefault(k,v)
 
         #short circuit __abstract__ inheritance
@@ -706,7 +711,7 @@ class ModelMetaClass(type):
         polymorphic_columns = [c for c in column_definitions if c[1].polymorphic_key]
         is_polymorphic = len(polymorphic_columns) > 0
         if len(polymorphic_columns) > 1:
-            raise ModelDefinitionException('only one polymorphic_key can be defined in a model, {} found'.format(len(polymorphic_columns)))
+            raise ModelDefinitionException('only one polymorphic_key can be defined in a model, {0} found'.format(len(polymorphic_columns)))
 
         polymorphic_column_name, polymorphic_column = polymorphic_columns[0] if polymorphic_columns else (None, None)
 
@@ -742,7 +747,7 @@ class ModelMetaClass(type):
         for k, v in column_definitions:
             # don't allow a column with the same name as a built-in attribute or method
             if k in BaseModel.__dict__:
-                raise ModelDefinitionException("column '{}' conflicts with built-in attribute/method".format(k))
+                raise ModelDefinitionException("column '{0}' conflicts with built-in attribute/method".format(k))
 
             # counter column primary keys are not allowed
             if (v.primary_key or v.partition_key) and isinstance(v, (columns.Counter, columns.BaseContainerColumn)):
@@ -776,15 +781,15 @@ class ModelMetaClass(type):
         for v in column_dict.values():
             # check for duplicate column names
             if v.db_field_name in col_names:
-                raise ModelException("{} defines the column {} more than once".format(name, v.db_field_name))
+                raise ModelException("{0} defines the column {1} more than once".format(name, v.db_field_name))
             if v.clustering_order and not (v.primary_key and not v.partition_key):
                 raise ModelException("clustering_order may be specified only for clustering primary keys")
             if v.clustering_order and v.clustering_order.lower() not in ('asc', 'desc'):
-                raise ModelException("invalid clustering order {} for column {}".format(repr(v.clustering_order), v.db_field_name))
+                raise ModelException("invalid clustering order {0} for column {1}".format(repr(v.clustering_order), v.db_field_name))
             col_names.add(v.db_field_name)
 
         #create db_name -> model name map for loading
-        db_map = {}
+        db_map = dict()
         for field_name, col in column_dict.items():
             db_map[col.db_field_name] = field_name
 
@@ -796,7 +801,7 @@ class ModelMetaClass(type):
         # maps the database field to the models key
         attrs['_db_map'] = db_map
         attrs['_pk_name'] = pk_name
-        attrs['_dynamic_columns'] = {}
+        attrs['_dynamic_columns'] = dict()
 
         attrs['_partition_keys'] = partition_keys
         attrs['_clustering_keys'] = clustering_keys
@@ -808,7 +813,7 @@ class ModelMetaClass(type):
         attrs['_polymorphic_base'] = polymorphic_base
         attrs['_polymorphic_column'] = polymorphic_column
         attrs['_polymorphic_column_name'] = polymorphic_column_name
-        attrs['_polymorphic_map'] = {} if is_polymorphic_base else None
+        attrs['_polymorphic_map'] = dict() if is_polymorphic_base else None
 
         #setup class exceptions
         DoesNotExistBase = None
@@ -816,14 +821,15 @@ class ModelMetaClass(type):
             DoesNotExistBase = getattr(base, 'DoesNotExist', None)
             if DoesNotExistBase is not None: break
         DoesNotExistBase = DoesNotExistBase or attrs.pop('DoesNotExist', BaseModel.DoesNotExist)
-        attrs['DoesNotExist'] = type('DoesNotExist', (DoesNotExistBase,), {})
+        attrs['DoesNotExist'] = type('DoesNotExist', (DoesNotExistBase,), dict())
 
         MultipleObjectsReturnedBase = None
         for base in bases:
             MultipleObjectsReturnedBase = getattr(base, 'MultipleObjectsReturned', None)
             if MultipleObjectsReturnedBase is not None: break
         MultipleObjectsReturnedBase = DoesNotExistBase or attrs.pop('MultipleObjectsReturned', BaseModel.MultipleObjectsReturned)
-        attrs['MultipleObjectsReturned'] = type('MultipleObjectsReturned', (MultipleObjectsReturnedBase,), {})
+        attrs['MultipleObjectsReturned'] = type('MultipleObjectsReturned',
+                (MultipleObjectsReturnedBase,), dict())
 
         #create the class and add a QuerySet to it
         klass = super(ModelMetaClass, cls).__new__(cls, name, bases, attrs)

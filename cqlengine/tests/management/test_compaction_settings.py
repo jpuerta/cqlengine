@@ -6,7 +6,7 @@ from cqlengine import Model, columns, SizeTieredCompactionStrategy, LeveledCompa
 from cqlengine.exceptions import CQLEngineException
 from cqlengine.management import get_compaction_options, drop_table, sync_table, get_table_settings
 from cqlengine.tests.base import BaseCassEngTestCase
-
+from contextlib import nested
 
 class CompactionModel(Model):
     __keyspace__ = 'test'
@@ -22,8 +22,8 @@ class BaseCompactionTest(BaseCassEngTestCase):
 
         key = "__compaction_{}__".format(key)
 
-        with patch.object(self.model, key, 10), \
-             self.assertRaises(CQLEngineException):
+        with nested(patch.object(self.model, key, 10),
+             self.assertRaises(CQLEngineException)):
             get_compaction_options(self.model)
 
 

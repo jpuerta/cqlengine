@@ -123,11 +123,12 @@ class QueryUpdateTests(BaseCassEngTestCase):
         partition = uuid4()
         cluster = 1
         TestQueryUpdateModel.objects.create(
-                partition=partition, cluster=cluster, text_set={"foo"})
+                partition=partition, cluster=cluster, text_set=set(["foo"]))
         TestQueryUpdateModel.objects(
-                partition=partition, cluster=cluster).update(text_set__add={'bar'})
+                partition=partition,
+                cluster=cluster).update(text_set__add=set(['bar']))
         obj = TestQueryUpdateModel.objects.get(partition=partition, cluster=cluster)
-        self.assertEqual(obj.text_set, {"foo", "bar"})
+        self.assertEqual(obj.text_set, set(["foo", "bar"]))
 
     def test_set_add_updates_new_record(self):
         """ If the key doesn't exist yet, an update creates the record
@@ -135,20 +136,20 @@ class QueryUpdateTests(BaseCassEngTestCase):
         partition = uuid4()
         cluster = 1
         TestQueryUpdateModel.objects(
-                partition=partition, cluster=cluster).update(text_set__add={'bar'})
+                partition=partition, cluster=cluster).update(text_set__add=set(['bar']))
         obj = TestQueryUpdateModel.objects.get(partition=partition, cluster=cluster)
-        self.assertEqual(obj.text_set, {"bar"})
+        self.assertEqual(obj.text_set, set(["bar"]))
 
     def test_set_remove_updates(self):
         partition = uuid4()
         cluster = 1
         TestQueryUpdateModel.objects.create(
-                partition=partition, cluster=cluster, text_set={"foo", "baz"})
+                partition=partition, cluster=cluster, text_set=set(["foo", "baz"]))
         TestQueryUpdateModel.objects(
                 partition=partition, cluster=cluster).update(
-                text_set__remove={'foo'})
+                text_set__remove=set(['foo']))
         obj = TestQueryUpdateModel.objects.get(partition=partition, cluster=cluster)
-        self.assertEqual(obj.text_set, {"baz"})
+        self.assertEqual(obj.text_set, set(["baz"]))
 
     def test_set_remove_new_record(self):
         """ Removing something not in the set should silently do nothing
@@ -156,12 +157,12 @@ class QueryUpdateTests(BaseCassEngTestCase):
         partition = uuid4()
         cluster = 1
         TestQueryUpdateModel.objects.create(
-                partition=partition, cluster=cluster, text_set={"foo"})
+                partition=partition, cluster=cluster, text_set=set(["foo"]))
         TestQueryUpdateModel.objects(
                 partition=partition, cluster=cluster).update(
-                text_set__remove={'afsd'})
+                text_set__remove=set(['afsd']))
         obj = TestQueryUpdateModel.objects.get(partition=partition, cluster=cluster)
-        self.assertEqual(obj.text_set, {"foo"})
+        self.assertEqual(obj.text_set, set(["foo"]))
 
     def test_list_append_updates(self):
         partition = uuid4()
@@ -192,12 +193,12 @@ class QueryUpdateTests(BaseCassEngTestCase):
         cluster = 1
         TestQueryUpdateModel.objects.create(
                 partition=partition, cluster=cluster,
-                text_map={"foo": '1', "bar": '2'})
+                text_map=dict({"foo": '1', "bar": '2'}))
         TestQueryUpdateModel.objects(
                 partition=partition, cluster=cluster).update(
-                text_map__update={"bar": '3', "baz": '4'})
+                text_map__update=dict({"bar": '3', "baz": '4'}))
         obj = TestQueryUpdateModel.objects.get(partition=partition, cluster=cluster)
-        self.assertEqual(obj.text_map, {"foo": '1', "bar": '3', "baz": '4'})
+        self.assertEqual(obj.text_map, dict({"foo": '1', "bar": '3', "baz": '4'}))
 
     def test_map_update_none_deletes_key(self):
         """ The CQL behavior is if you set a key in a map to null it deletes
@@ -211,9 +212,9 @@ class QueryUpdateTests(BaseCassEngTestCase):
         # cluster = 1
         # TestQueryUpdateModel.objects.create(
         #         partition=partition, cluster=cluster,
-        #         text_map={"foo": '1', "bar": '2'})
+        #         text_map=dict({"foo": '1', "bar": '2'}))
         # TestQueryUpdateModel.objects(
         #         partition=partition, cluster=cluster).update(
-        #         text_map__update={"bar": None})
+        #         text_map__update=dict({"bar": None}))
         # obj = TestQueryUpdateModel.objects.get(partition=partition, cluster=cluster)
-        # self.assertEqual(obj.text_map, {"foo": '1'})
+        # self.assertEqual(obj.text_map, dict({"foo": '1'}))
