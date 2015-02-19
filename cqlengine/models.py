@@ -65,7 +65,7 @@ class QuerySetDescriptor(object):
             name, column = model._polymorphic_column_name, model._polymorphic_column
             if column.partition_key or column.index:
                 # look for existing poly types
-                return queryset.filter(**dict({name: model.__polymorphic_key__}))
+                return queryset.filter(**{name: model.__polymorphic_key__})
 
         return queryset
 

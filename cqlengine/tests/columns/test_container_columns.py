@@ -338,11 +338,11 @@ class TestMapColumn(BaseCassEngTestCase):
 
     def test_add_none_as_map_key(self):
         with self.assertRaises(ValidationError):
-            TestMapModel.create(int_map=dict({None:1}))
+            TestMapModel.create(int_map={None:1})
 
     def test_add_none_as_map_value(self):
         with self.assertRaises(ValidationError):
-            TestMapModel.create(int_map=dict({None:1}))
+            TestMapModel.create(int_map={None:1})
 
     def test_empty_retrieve(self):
         tmp = TestMapModel.create()
@@ -365,8 +365,8 @@ class TestMapColumn(BaseCassEngTestCase):
         k2 = uuid4()
         now = datetime.now()
         then = now + timedelta(days=1)
-        m1 = TestMapModel.create(int_map=dict({1: k1, 2: k2}),
-                text_map=dict({'now': now, 'then': then}))
+        m1 = TestMapModel.create(int_map={1: k1, 2: k2},
+                text_map={'now': now, 'then': then})
         m2 = TestMapModel.get(partition=m1.partition)
 
         assert isinstance(m2.int_map, dict)
@@ -387,8 +387,8 @@ class TestMapColumn(BaseCassEngTestCase):
         Tests that attempting to use the wrong types will raise an exception
         """
         with self.assertRaises(ValidationError):
-            TestMapModel.create(int_map=dict({'key': 2, uuid4(): 'val'}),
-                    text_map=dict({2: 5}))
+            TestMapModel.create(int_map={'key': 2, uuid4(): 'val'},
+                    text_map={2: 5})
 
     def test_element_count_validation(self):
         """
@@ -407,8 +407,8 @@ class TestMapColumn(BaseCassEngTestCase):
         earlier = early - timedelta(minutes=30)
         later = now + timedelta(minutes=30)
 
-        initial = dict({'now': now, 'early': earlier})
-        final = dict({'later': later, 'early': early})
+        initial = {'now': now, 'early': earlier}
+        final = {'later': later, 'early': early}
 
         m1 = TestMapModel.create(text_map=initial)
 
@@ -421,7 +421,7 @@ class TestMapColumn(BaseCassEngTestCase):
     def test_updates_from_none(self):
         """ Tests that updates from None work as expected """
         m = TestMapModel.create(int_map=None)
-        expected = dict({1: uuid4()})
+        expected = {1: uuid4()}
         m.int_map = expected
         m.save()
 
@@ -436,7 +436,7 @@ class TestMapColumn(BaseCassEngTestCase):
     def test_blind_updates_from_none(self):
         """ Tests that updates from None work as expected """
         m = TestMapModel.create(int_map=None)
-        expected = dict({1: uuid4()})
+        expected = {1: uuid4()}
         m.int_map = expected
         m.save()
 
@@ -450,7 +450,7 @@ class TestMapColumn(BaseCassEngTestCase):
 
     def test_updates_to_none(self):
         """ Tests that setting the field to None works as expected """
-        m = TestMapModel.create(int_map=dict({1: uuid4()}))
+        m = TestMapModel.create(int_map={1: uuid4()})
         m.int_map = None
         m.save()
 
@@ -477,7 +477,7 @@ class TestMapColumn(BaseCassEngTestCase):
     def test_to_python(self):
         """ Tests that to_python of value column is called """
         column = columns.Map(JsonTestColumn, JsonTestColumn)
-        val = dict({1: 2, 3: 4, 5: 6})
+        val = {1: 2, 3: 4, 5: 6}
         db_val = column.to_database(val)
         assert db_val.value == dict((json.dumps(k),json.dumps(v)) for (k,v) in val.items())
         py_val = column.to_python(db_val.value)
@@ -486,7 +486,7 @@ class TestMapColumn(BaseCassEngTestCase):
     def test_default_empty_container_saving(self):
         """ tests that the default empty container is not saved if it hasn't been updated """
         pkey = uuid4()
-        tmap = dict({1: uuid4(), 2: uuid4()})
+        tmap = {1: uuid4(), 2: uuid4()}
         # create a row with set data
         TestMapModel.create(partition=pkey, int_map=tmap)
         # create another with no set data

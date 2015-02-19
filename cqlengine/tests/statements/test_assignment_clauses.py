@@ -29,7 +29,7 @@ class SetUpdateClauseTests(TestCase):
 
         ctx = dict()
         c.update_context(ctx)
-        self.assertEqual(ctx, dict({'0': set([1, 2])}))
+        self.assertEqual(ctx, {'0': set([1, 2])})
 
     def test_null_update(self):
         """ tests setting a set to None creates an empty update statement """
@@ -97,7 +97,7 @@ class SetUpdateClauseTests(TestCase):
 
         ctx = dict()
         c.update_context(ctx)
-        self.assertEqual(ctx, dict({'0': set([3])}))
+        self.assertEqual(ctx, {'0': set([3])})
 
     def test_removals(self):
         c = SetUpdateClause('s', set([1, 2]), previous=set([1, 2, 3]))
@@ -113,7 +113,7 @@ class SetUpdateClauseTests(TestCase):
 
         ctx = dict()
         c.update_context(ctx)
-        self.assertEqual(ctx, dict({'0': set([3])}))
+        self.assertEqual(ctx, {'0': set([3])})
 
     def test_additions_and_removals(self):
         c = SetUpdateClause('s', set([2, 3]), previous=set([1, 2]))
@@ -129,7 +129,7 @@ class SetUpdateClauseTests(TestCase):
 
         ctx = dict()
         c.update_context(ctx)
-        self.assertEqual(ctx, dict({'0': set([3]), '1': set([1])}))
+        self.assertEqual(ctx, {'0': set([3]), '1': set([1])})
 
 
 class ListUpdateClauseTests(TestCase):
@@ -148,7 +148,7 @@ class ListUpdateClauseTests(TestCase):
 
         ctx = dict()
         c.update_context(ctx)
-        self.assertEqual(ctx, dict({'0': [1, 2, 3]}))
+        self.assertEqual(ctx, {'0': [1, 2, 3]})
 
     def test_update_from_empty(self):
         c = ListUpdateClause('s', [1, 2, 3], previous=[])
@@ -164,7 +164,7 @@ class ListUpdateClauseTests(TestCase):
 
         ctx = dict()
         c.update_context(ctx)
-        self.assertEqual(ctx, dict({'0': [1, 2, 3]}))
+        self.assertEqual(ctx, {'0': [1, 2, 3]})
 
     def test_update_from_different_list(self):
         c = ListUpdateClause('s', [1, 2, 3], previous=[3, 2, 1])
@@ -180,7 +180,7 @@ class ListUpdateClauseTests(TestCase):
 
         ctx = dict()
         c.update_context(ctx)
-        self.assertEqual(ctx, dict({'0': [1, 2, 3]}))
+        self.assertEqual(ctx, {'0': [1, 2, 3]})
 
     def test_append(self):
         c = ListUpdateClause('s', [1, 2, 3, 4], previous=[1, 2])
@@ -196,7 +196,7 @@ class ListUpdateClauseTests(TestCase):
 
         ctx = dict()
         c.update_context(ctx)
-        self.assertEqual(ctx, dict({'0': [3, 4]}))
+        self.assertEqual(ctx, {'0': [3, 4]})
 
     def test_prepend(self):
         c = ListUpdateClause('s', [1, 2, 3, 4], previous=[3, 4])
@@ -213,7 +213,7 @@ class ListUpdateClauseTests(TestCase):
         ctx = dict()
         c.update_context(ctx)
         # test context list reversal
-        self.assertEqual(ctx, dict({'0': [2, 1]}))
+        self.assertEqual(ctx, {'0': [2, 1]})
 
     def test_append_and_prepend(self):
         c = ListUpdateClause('s', [1, 2, 3, 4, 5, 6], previous=[3, 4])
@@ -230,7 +230,7 @@ class ListUpdateClauseTests(TestCase):
         ctx = dict()
         c.update_context(ctx)
         # test context list reversal
-        self.assertEqual(ctx, dict({'0': [2, 1], '1': [5, 6]}))
+        self.assertEqual(ctx, {'0': [2, 1], '1': [5, 6]})
 
     def test_shrinking_list_update(self):
         """ tests that updating to a smaller list results in an insert statement """
@@ -247,13 +247,13 @@ class ListUpdateClauseTests(TestCase):
 
         ctx = dict()
         c.update_context(ctx)
-        self.assertEqual(ctx, dict({'0': [1, 2, 3]}))
+        self.assertEqual(ctx, {'0': [1, 2, 3]})
 
 
 class MapUpdateTests(TestCase):
 
     def test_update(self):
-        c = MapUpdateClause('s', dict({3: 0, 5: 6}), previous=dict({5: 0, 3: 4}))
+        c = MapUpdateClause('s', {3: 0, 5: 6}, previous={5: 0, 3: 4})
         c._analyze()
         c.set_context_id(0)
 
@@ -263,10 +263,10 @@ class MapUpdateTests(TestCase):
 
         ctx = dict()
         c.update_context(ctx)
-        self.assertEqual(ctx, dict({'0': 3, "1": 0, '2': 5, '3': 6}))
+        self.assertEqual(ctx, {'0': 3, "1": 0, '2': 5, '3': 6})
 
     def test_update_from_null(self):
-        c = MapUpdateClause('s', dict({3: 0, 5: 6}))
+        c = MapUpdateClause('s', {3: 0, 5: 6})
         c._analyze()
         c.set_context_id(0)
 
@@ -276,10 +276,10 @@ class MapUpdateTests(TestCase):
 
         ctx = dict()
         c.update_context(ctx)
-        self.assertEqual(ctx, dict({'0': 3, "1": 0, '2': 5, '3': 6}))
+        self.assertEqual(ctx, {'0': 3, "1": 0, '2': 5, '3': 6})
 
     def test_nulled_columns_arent_included(self):
-        c = MapUpdateClause('s', dict({3: 0}), dict({1: 2, 3: 4}))
+        c = MapUpdateClause('s', {3: 0}, {1: 2, 3: 4})
         c._analyze()
         c.set_context_id(0)
 
@@ -297,7 +297,7 @@ class CounterUpdateTests(TestCase):
 
         ctx = dict()
         c.update_context(ctx)
-        self.assertEqual(ctx, dict({'5': 2}))
+        self.assertEqual(ctx, {'5': 2})
 
     def test_negative_update(self):
         c = CounterUpdateClause('a', 4, 7)
@@ -308,7 +308,7 @@ class CounterUpdateTests(TestCase):
 
         ctx = dict()
         c.update_context(ctx)
-        self.assertEqual(ctx, dict({'3': 3}))
+        self.assertEqual(ctx, {'3': 3})
 
     def noop_update(self):
         c = CounterUpdateClause('a', 5, 5)
@@ -319,13 +319,13 @@ class CounterUpdateTests(TestCase):
 
         ctx = dict()
         c.update_context(ctx)
-        self.assertEqual(ctx, dict({'5': 0}))
+        self.assertEqual(ctx, {'5': 0})
 
 
 class MapDeleteTests(TestCase):
 
     def test_update(self):
-        c = MapDeleteClause('s', dict({3: 0}), dict({1: 2, 3: 4, 5: 6}))
+        c = MapDeleteClause('s', {3: 0}, {1: 2, 3: 4, 5: 6})
         c._analyze()
         c.set_context_id(0)
 
@@ -335,7 +335,7 @@ class MapDeleteTests(TestCase):
 
         ctx = dict()
         c.update_context(ctx)
-        self.assertEqual(ctx, dict({'0': 1, '1': 5}))
+        self.assertEqual(ctx, {'0': 1, '1': 5})
 
 
 class FieldDeleteTests(TestCase):

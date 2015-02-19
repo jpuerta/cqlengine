@@ -192,7 +192,7 @@ def get_compaction_options(model):
     if not model.__compaction__:
         return dict()
 
-    result = dict({'class':model.__compaction__})
+    result = {'class':model.__compaction__}
 
     def setter(key, limited_to_strategy = None):
         """

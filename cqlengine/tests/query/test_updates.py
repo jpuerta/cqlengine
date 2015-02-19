@@ -193,12 +193,12 @@ class QueryUpdateTests(BaseCassEngTestCase):
         cluster = 1
         TestQueryUpdateModel.objects.create(
                 partition=partition, cluster=cluster,
-                text_map=dict({"foo": '1', "bar": '2'}))
+                text_map={"foo": '1', "bar": '2'})
         TestQueryUpdateModel.objects(
                 partition=partition, cluster=cluster).update(
-                text_map__update=dict({"bar": '3', "baz": '4'}))
+                text_map__update={"bar": '3', "baz": '4'})
         obj = TestQueryUpdateModel.objects.get(partition=partition, cluster=cluster)
-        self.assertEqual(obj.text_map, dict({"foo": '1', "bar": '3', "baz": '4'}))
+        self.assertEqual(obj.text_map, {"foo": '1', "bar": '3', "baz": '4'})
 
     def test_map_update_none_deletes_key(self):
         """ The CQL behavior is if you set a key in a map to null it deletes
@@ -212,9 +212,9 @@ class QueryUpdateTests(BaseCassEngTestCase):
         # cluster = 1
         # TestQueryUpdateModel.objects.create(
         #         partition=partition, cluster=cluster,
-        #         text_map=dict({"foo": '1', "bar": '2'}))
+        #         text_map={"foo": '1', "bar": '2'})
         # TestQueryUpdateModel.objects(
         #         partition=partition, cluster=cluster).update(
-        #         text_map__update=dict({"bar": None}))
+        #         text_map__update={"bar": None})
         # obj = TestQueryUpdateModel.objects.get(partition=partition, cluster=cluster)
-        # self.assertEqual(obj.text_map, dict({"foo": '1'}))
+        # self.assertEqual(obj.text_map, {"foo": '1'})
