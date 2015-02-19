@@ -13,7 +13,6 @@ from cqlengine.tests.base import BaseCassEngTestCase
 from contextlib import nested
 
 class TestTimestampModel(Model):
-    __keyspace__ = 'test'
     id      = columns.UUID(primary_key=True, default=lambda:uuid4())
     count   = columns.Integer()
 

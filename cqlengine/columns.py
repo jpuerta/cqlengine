@@ -27,6 +27,7 @@ class BaseValueManager(object):
         self.column = column
         self.previous_value = deepcopy(value)
         self.value = value
+        self.explicit = False
 
     @property
     def deleted(self):
@@ -141,9 +142,7 @@ class Column(object):
         if there's a problem
         """
         if value is None:
-            if self.has_default:
-                return self.get_default()
-            elif self.required:
+            if self.required:
                 raise ValidationError('{0} - None values are not allowed'.format(self.column_name or self.db_field))
         return value
 
@@ -253,7 +252,7 @@ class Text(Column):
         value = super(Text, self).validate(value)
         if value is None: return
         if not isinstance(value, (six.string_types, bytearray)) and value is not None:
-            raise ValidationError('{0} is not a string'.format(type(value)))
+            raise ValidationError('{0} {1} is not a string'.format(self.column_name, type(value)))
         if self.max_length:
             if len(value) > self.max_length:
                 raise ValidationError('{0} is longer than {1} characters'.format(self.column_name, self.max_length))
@@ -272,7 +271,7 @@ class Integer(Column):
         try:
             return int(val)
         except (TypeError, ValueError):
-            raise ValidationError("{0} can't be converted to integral value".format(value))
+            raise ValidationError("{0} {1} can't be converted to integral value".format(self.column_name, value))
 
     def to_python(self, value):
         return self.validate(value)
@@ -296,7 +295,7 @@ class VarInt(Column):
             return int(val)
         except (TypeError, ValueError):
             raise ValidationError(
-                "{0} can't be converted to integral value".format(value))
+                "{0} {1} can't be converted to integral value".format(self.column_name, value))
 
     def to_python(self, value):
         return self.validate(value)
@@ -352,7 +351,7 @@ class DateTime(Column):
             if isinstance(value, date):
                 value = datetime(value.year, value.month, value.day)
             else:
-                raise ValidationError("'{0}' is not a datetime object".format(value))
+                raise ValidationError("{0} '{1}' is not a datetime object".format(self.column_name, value))
         epoch = datetime(1970, 1, 1, tzinfo=value.tzinfo)
         offset = get_total_seconds(epoch.tzinfo.utcoffset(epoch)) if epoch.tzinfo else 0
 
@@ -379,7 +378,7 @@ class Date(Column):
         if isinstance(value, datetime):
             value = value.date()
         if not isinstance(value, date):
-            raise ValidationError("'{0}' is not a date object".format(repr(value)))
+            raise ValidationError("{0} '{1}' is not a date object".format(self.column_name, repr(value)))
 
         return int(get_total_seconds(value - date(1970, 1, 1)) * 1000)
 
@@ -399,7 +398,7 @@ class UUID(Column):
         if isinstance(val, _UUID): return val
         if isinstance(val, six.string_types) and self.re_uuid.match(val):
             return _UUID(val)
-        raise ValidationError("{0} is not a valid uuid".format(value))
+        raise ValidationError("{0} {1} is not a valid uuid".format(self.column_name, value))
 
     def to_python(self, value):
         return self.validate(value)
@@ -481,7 +480,7 @@ class Float(Column):
         try:
             return float(value)
         except (TypeError, ValueError):
-            raise ValidationError("{0} is not a valid float".format(value))
+            raise ValidationError("{0} {1} is not a valid float".format(self.column_name, value))
 
     def to_python(self, value):
         return self.validate(value)
@@ -501,7 +500,7 @@ class Decimal(Column):
         try:
             return _Decimal(val)
         except InvalidOperation:
-            raise ValidationError("'{0}' can't be coerced to decimal".format(val))
+            raise ValidationError("{0} '{1}' can't be coerced to decimal".format(self.column_name, val))
 
     def to_python(self, value):
         return self.validate(value)
@@ -543,7 +542,7 @@ class BaseContainerColumn(Column):
         # It is dangerous to let collections have more than 65535.
         # See: https://issues.apache.org/jira/browse/CASSANDRA-5428
         if value is not None and len(value) > 65535:
-            raise ValidationError("Collection can't have more than 65535 elements.")
+            raise ValidationError("{0} Collection can't have more than 65535 elements.".format(self.column_name))
         return value
 
     def get_column_def(self):
@@ -594,12 +593,12 @@ class Set(BaseContainerColumn):
         types = (set,) if self.strict else (set, list, tuple)
         if not isinstance(val, types):
             if self.strict:
-                raise ValidationError('{0} is not a set object'.format(val))
+                raise ValidationError('{0} {1} is not a set object'.format(self.column_name, val))
             else:
-                raise ValidationError('{0} cannot be coerced to a set object'.format(val))
+                raise ValidationError('{0} {1} cannot be coerced to a set object'.format(self.column_name, val))
 
         if None in val:
-            raise ValidationError("None not allowed in a set")
+            raise ValidationError("{0} None not allowed in a set".format(self.column_name))
 
         return set(self.value_col.validate(v) for v in val)
 
@@ -640,9 +639,9 @@ class List(BaseContainerColumn):
         val = super(List, self).validate(value)
         if val is None: return
         if not isinstance(val, (set, list, tuple)):
-            raise ValidationError('{0} is not a list object'.format(val))
+            raise ValidationError('{0} {1} is not a list object'.format(self.column_name, val))
         if None in val:
-            raise ValidationError("None is not allowed in a list")
+            raise ValidationError("{0} None is not allowed in a list".format(self.column_name))
         return [self.value_col.validate(v) for v in val]
 
     def to_python(self, value):
@@ -715,9 +714,8 @@ class Map(BaseContainerColumn):
         val = super(Map, self).validate(value)
         if val is None: return
         if not isinstance(val, dict):
-            raise ValidationError('{0} is not a dict object'.format(val))
-        return dict((self.key_col.validate(k), self.value_col.validate(v)) for
-                (k,v) in val.items())
+            raise ValidationError('{0} {1} is not a dict object'.format(self.column_name, val))
+        return dict((self.key_col.validate(k),self.value_col.validate(v)) for k,v in val.items())
 
     def to_python(self, value):
         if value is None:
