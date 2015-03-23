@@ -610,7 +610,7 @@ class Set(BaseContainerColumn):
         if value is None: return None
 
         if isinstance(value, self.Quoter): return value
-        return self.Quoter(self.value_col.to_database(v) for v in value)
+        return self.Quoter(set(self.value_col.to_database(v) for v in value))
 
 
 
@@ -651,7 +651,7 @@ class List(BaseContainerColumn):
     def to_database(self, value):
         if value is None: return None
         if isinstance(value, self.Quoter): return value
-        return self.Quoter(self.value_col.to_database(v) for v in value)
+        return self.Quoter([self.value_col.to_database(v) for v in value])
 
 
 class Map(BaseContainerColumn):
@@ -727,8 +727,8 @@ class Map(BaseContainerColumn):
     def to_database(self, value):
         if value is None: return None
         if isinstance(value, self.Quoter): return value
-        return self.Quoter((self.key_col.to_database(k),
-            self.value_col.to_database(v)) for (k,v) in value.items())
+        return self.Quoter(dict((self.key_col.to_database(k),
+            self.value_col.to_database(v)) for (k,v) in value.items()))
 
 
 
